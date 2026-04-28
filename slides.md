@@ -4,6 +4,12 @@ subtitle: "UChicago Experimental Design 2"
 author: "Nakwon Rim"
 date: "2026-04-28"
 theme: white
+include-after: |
+  <script>
+  Reveal.on('ready', function() {
+    Reveal.configure({ pdfSeparateFragments: false });
+  });
+  </script>
 ---
 
 # Today

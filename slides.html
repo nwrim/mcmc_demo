@@ -190,7 +190,8 @@ class="math inline">\(\min(1,
 proportions</li>
 <li class="fragment">We only gave him a rule for comparing two adjacent
 islands</li>
-<li class="fragment"><strong>The proportions emerged.</strong></li>
+<li class="fragment"><strong>The proportions emerged.</strong> That’s
+the whole trick of MCMC.</li>
 <li class="fragment">This is an example of the <strong>Metropolis
 algorithm</strong>: guarantees that it converges to the correct
 proportion in the long run, as long as proposals are symmetric</li>
@@ -921,6 +922,11 @@ quarter</li>
           RevealZoom
         ]
       });
+    </script>
+    <script>
+    Reveal.on('ready', function() {
+      Reveal.configure({ pdfSeparateFragments: false });
+    });
     </script>
     </body>
 </html>
