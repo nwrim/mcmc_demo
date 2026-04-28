@@ -1,0 +1,92 @@
+/* Overrides for pandoc + reveal.js (default 'white' theme).
+ * - 1280×800 canvas, centered in the browser (reveal.js default)
+ * - Title pinned to a fixed top position within the canvas
+ * - Content flows below, horizontally centered */
+
+.reveal {
+  font-size: 32px;
+}
+
+/* Fixed top padding = title always lands in the same place.
+ * Requires -V center=false so reveal.js doesn't vertically re-center. */
+.reveal .slides > section,
+.reveal .slides > section > section {
+  padding-top: 40px;
+  text-align: center;
+}
+
+.reveal h1 {
+  font-size: 1.4em;
+  margin: 0 0 0.6em 0;
+  padding-bottom: 0.15em;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.15);
+  min-height: 1.4em;    /* empty-title slides still reserve the same space */
+  text-align: center;
+}
+
+.reveal h2 {
+  font-size: 1.2em;
+}
+
+.reveal p,
+.reveal li {
+  font-size: 0.78em;
+  line-height: 1.35;
+}
+
+/* Bullet lists: fixed width so left edge stays consistent regardless of text length. */
+.reveal ul,
+.reveal ol {
+  display: inline-block;
+  text-align: left;
+  width: 85%;
+  margin: 0 auto;
+}
+
+.reveal ul ul,
+.reveal ul ol,
+.reveal ol ul,
+.reveal ol ol,
+.reveal ul ul li,
+.reveal ul ol li,
+.reveal ol ul li,
+.reveal ol ol li {
+  font-size: 1em !important;
+}
+
+.reveal img {
+  max-height: 560px;
+  max-width: 92%;
+  border: none;
+  box-shadow: none;
+  background: none;
+}
+
+.reveal video {
+  max-height: 560px;
+  max-width: 92%;
+}
+
+.reveal table {
+  font-size: 0.72em;
+  margin: 0 auto;
+}
+
+.reveal table th,
+.reveal table td {
+  padding: 0.25em 0.6em;
+}
+
+.reveal pre,
+.reveal code {
+  font-size: 0.7em;
+}
+
+.reveal .katex,
+.reveal .MathJax {
+  font-size: 0.9em;
+}
+
+.reveal .fragment {
+  transition: none !important;
+}

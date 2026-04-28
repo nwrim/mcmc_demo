@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Nakwon Rim">
+  <meta name="dcterms.date" content="2026-04-28">
+  <title>(Hopefully Intuition-first) Introduction to Markov Chain Monte Carlo (MCMC)</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@4/dist/reset.css">
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@4/dist/reveal.css">
+  <style>
+    .reveal .sourceCode {  /* see #7635 */
+      overflow: visible;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/reveal.js@4/dist/theme/white.css" id="theme">
+  <link rel="stylesheet" href="slides.css"/>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section id="title-slide">
+  <h1 class="title">(Hopefully Intuition-first)<br>Introduction
+to<br>Markov Chain Monte Carlo (MCMC)</h1>
+  <p class="subtitle">UChicago Experimental Design 2</p>
+  <p class="author">Nakwon Rim</p>
+  <p class="date">2026-04-28</p>
+</section>
+
+<section id="today" class="slide level1">
+<h1>Today</h1>
+<ol type="1">
+<li class="fragment">King Markov analogy for MCMC</li>
+<li class="fragment">The Metropolis algorithm</li>
+<li class="fragment">Hamiltonian Monte Carlo &amp; No-U-Turn
+Sampler</li>
+</ol>
+</section>
+<section id="before-we-begin" class="slide level1">
+<h1>Before we begin</h1>
+<ul>
+<li class="fragment">Stop and ask questions at any point</li>
+<li class="fragment">Most of the material is incremental, so if you
+don’t get something early it’s likely the rest won’t make sense
+either</li>
+<li class="fragment">This thing is available at <a
+href="https://nwrim.github.io/mcmc_demo/slides.html">[nwrim.github.io/mcmc_demo](https://nwrim.github.io/mcmc_demo/slides.html)</a>
+and all materials are in <a
+href="https://github.com/nwrim/mcmc_demo">https://github.com/nwrim/mcmc_demo</a></li>
+</ul>
+</section>
+<section id="methods-we-have-discussed-so-far-for-posterior-computation"
+class="slide level1">
+<h1>Methods we have discussed so far for posterior computation</h1>
+<ul>
+<li class="fragment">Analytical approach (often impossible)</li>
+<li class="fragment">Grid approximation (very intensive)</li>
+<li class="fragment">Quadratic approximation (needs to be a Gaussian
+shaped posterior)</li>
+<li class="fragment">Markov Chain Monte Carlo (Today!)</li>
+</ul>
+</section>
+<section id="why-do-we-need-markov-chain-monte-carlo"
+class="slide level1">
+<h1>Why do we need Markov Chain Monte Carlo?</h1>
+<ul>
+<li class="fragment">Enables sampling from the posterior without
+assuming a Gaussian or any other shape</li>
+<li class="fragment">More complex models often produce non-Gaussian
+posterior distributions, and sometimes cannot be estimated with
+techniques described so far</li>
+<li class="fragment">Perhaps the most important takeaway today:
+<strong>Lets you sample the posterior without knowing the
+posterior</strong></li>
+</ul>
+</section>
+<section id="what-is-markov-chain-monte-carlo" class="slide level1">
+<h1>What is Markov Chain Monte Carlo?</h1>
+<ul>
+<li class="fragment"><strong>Monte Carlo</strong>: uses random sampling
+repeatedly</li>
+<li class="fragment"><strong>Markov Chain</strong> (Markov process):
+move between states with transition probabilities
+<ul>
+<li class="fragment">Next state depends only on the current state
+(“memoryless”)</li>
+<li class="fragment">“Chain” = a sequence <img
+data-src="external/Markov_chain.png"
+style="max-height: 300px; display: block; margin: auto" /></li>
+</ul></li>
+</ul>
+</section>
+<section id="today-1" class="slide level1">
+<h1>Today</h1>
+<div>
+<ol type="1">
+<li><strong>King Markov analogy for MCMC</strong></li>
+<li>The Metropolis algorithm</li>
+<li>Hamiltonian Monte Carlo &amp; No-U-Turn Sampler</li>
+</ol>
+</div>
+</section>
+<section id="meet-king-markov-and-his-very-realistic-setup"
+class="slide level1">
+<h1>Meet King Markov and his very realistic setup</h1>
+<p><img data-src="out/01_island_only.png"
+style="max-height: 300px" /></p>
+<ul>
+<li class="fragment">Owns 10 islands arranged in a ring</li>
+<li class="fragment">Island <span class="math inline">\(i\)</span> is
+<span class="math inline">\(i\)</span> times bigger than island 1</li>
+<li class="fragment">Can only compare <strong>two adjacent
+islands</strong> at a time
+<ul>
+<li class="fragment">“Is the next island bigger or smaller than this
+one, and by how much?”</li>
+<li class="fragment">Never “how big is island 7 in absolute terms?”</li>
+</ul></li>
+<li class="fragment">Must visit each island in proportion to its
+size</li>
+</ul>
+</section>
+<section id="the-metropolis-algorithm" class="slide level1">
+<h1>The Metropolis algorithm</h1>
+<ul>
+<li class="fragment">Proposal: flips a coin to propose clockwise or
+counter-clockwise</li>
+</ul>
+<div class="fragment">
+<p><img data-src="out/01_island_proposal.png"
+style="max-height: 450px" /></p>
+</div>
+</section>
+<section id="proposal-step" class="slide level1">
+<h1>Proposal step</h1>
+<ul>
+<li class="fragment">Intuition: <strong>King Markov wants to spend more
+time on the island that is bigger</strong></li>
+<li class="fragment">Compare relative sizes: <span
+class="math inline">\(\frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{current}}}\)</span>
+<ul>
+<li class="fragment">If proposal is <strong>bigger</strong> → always
+move</li>
+<li class="fragment">If proposal is <strong>smaller</strong> → move
+proportional to relative sizes</li>
+<li class="fragment">If rejected, <strong>Stay on current
+island</strong> for one more week</li>
+<li class="fragment">In practice, this is moving with probability <span
+class="math inline">\(\min(1,
+\frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{current}}})\)</span></li>
+</ul></li>
+</ul>
+</section>
+<section id="island-chain-week-0" class="slide level1">
+<h1>Island chain — week 0</h1>
+<p><img data-src="out/01_island_step00.png" /></p>
+</section>
+<section id="island-chain-week-1" class="slide level1">
+<h1>Island chain — week 1</h1>
+<p><img data-src="out/01_island_step01.png" /></p>
+</section>
+<section id="island-chain-week-2" class="slide level1">
+<h1>Island chain — week 2</h1>
+<p><img data-src="out/01_island_step02.png" /></p>
+</section>
+<section id="live-chain-island" class="slide level1">
+<h1>Live chain — island</h1>
+<video src="out/01_island.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="convergence-island" class="slide level1">
+<h1>Convergence — island</h1>
+<p><img data-src="out/01_island_convergence.png" /> - Acceptance rate:
+83.40%</p>
+</section>
+<section id="what-just-happened" class="slide level1">
+<h1>What just happened</h1>
+<ul>
+<li class="fragment">We never told the king to visit in those
+proportions</li>
+<li class="fragment">We only gave him a rule for comparing two adjacent
+islands</li>
+<li class="fragment"><strong>The proportions emerged.</strong> That’s
+the whole trick of MCMC.</li>
+<li class="fragment">This is an example of the <strong>Metropolis
+algorithm</strong>: guarantees that it converges to the correct
+proportion in the long run, as long as proposals are symmetric</li>
+</ul>
+</section>
+<section id="today-2" class="slide level1">
+<h1>Today</h1>
+<div>
+<ol type="1">
+<li>King Markov analogy for MCMC</li>
+<li><strong>The Metropolis algorithm</strong></li>
+<li>Hamiltonian Monte Carlo &amp; No-U-Turn Sampler</li>
+</ol>
+</div>
+</section>
+<section id="from-islands-to-parameter-values" class="slide level1">
+<h1>From islands to parameter values</h1>
+<table>
+<thead>
+<tr class="header">
+<th>Analogy</th>
+<th>MCMC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Islands</td>
+<td>Parameter values</td>
+</tr>
+<tr class="even">
+<td>Island sizes</td>
+<td>Posterior probabilities</td>
+</tr>
+<tr class="odd">
+<td>Weeks on an island</td>
+<td>Samples from the posterior</td>
+</tr>
+</tbody>
+</table>
+<p>Let’s see this work in a simple regression setup</p>
+</section>
+<section id="simulated-data" class="slide level1">
+<h1>Simulated data</h1>
+<ul>
+<li class="fragment">True model: <span class="math inline">\(y \sim
+\text{Normal}(\mu, \sigma)\)</span>, <span class="math inline">\(\quad
+\mu = \alpha + \beta x\)</span></li>
+<li class="fragment">True values: <span class="math inline">\(\alpha =
+0\)</span>, <span class="math inline">\(\beta = 0.6\)</span>, <span
+class="math inline">\(\sigma = 0.25\)</span></li>
+</ul>
+<div class="fragment">
+<p><img data-src="out/02_regression_discrete_data.png"
+style="max-height: 400px" /></p>
+</div>
+</section>
+<section id="model" class="slide level1">
+<h1>Model</h1>
+<ul>
+<li class="fragment"><span class="math inline">\(y \sim
+\text{Normal}(\mu, \sigma)\)</span>, <span class="math inline">\(\quad
+\mu = \alpha + \beta x\)</span></li>
+<li class="fragment">Assume we know <span class="math inline">\(\alpha =
+0\)</span> and <span class="math inline">\(\sigma = 0.25\)</span>, and
+we only estimating <span class="math inline">\(\beta\)</span></li>
+<li class="fragment">Flat prior over 10 candidate <span
+class="math inline">\(\beta\)</span>s: <span
+class="math inline">\(\{0.40, 0.45, \ldots, 0.85\}\)</span></li>
+</ul>
+<div class="fragment">
+<p><img data-src="out/02_regression_discrete_lines.png"
+style="max-height: 360px; display: block; margin: auto" /></p>
+</div>
+<ul>
+<li class="fragment">so we want to sample from the posterior: <span
+class="math inline">\(P(\beta = i | \text{Data})\)</span> for <span
+class="math inline">\(i \in \{0.40, 0.45, \ldots, 0.85\}\)</span></li>
+<li class="fragment">Yes, discrete <span
+class="math inline">\(\beta\)</span>s are ridiculous, but we are mapping
+directly to the islands. We’ll relax this shortly</li>
+</ul>
+</section>
+<section id="acceptance-probability" class="slide level1">
+<h1>Acceptance probability</h1>
+<ul>
+<li class="fragment">Remember King Markov only knew the
+<strong>relative</strong> sizes of islands (<span
+class="math inline">\(\frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{current}}}\)</span>)</li>
+<li class="fragment">Similarly, only the <strong>relative</strong>
+posterior matters here</li>
+<li class="fragment">The acceptance probability is:
+<ul>
+<li class="fragment"><span class="math inline">\(\min\!\left(1,
+\dfrac{P(\beta_{proposed} | \text{Data})}{P(\beta_{current} |
+\text{Data})}\right)\)</span></li>
+</ul></li>
+</ul>
+</section>
+<section id="why-we-dont-need-pdata" class="slide level1">
+<h1>Why we don’t need P(Data)</h1>
+<ul>
+<li class="fragment"><span
+class="math inline">\(\dfrac{P(\beta_{proposed} |
+\text{Data})}{P(\beta_{current} | \text{Data})} =
+\dfrac{\dfrac{P(\text{Data} |
+\beta_{proposed})\,P(\beta_{proposed})}{P(\text{Data})}}{\dfrac{P(\text{Data}
+| \beta_{current})\,P(\beta_{current})}{P(\text{Data})}} =
+\dfrac{P(\text{Data} |
+\beta_{proposed})\,P(\beta_{proposed})}{P(\text{Data} |
+\beta_{current})\,P(\beta_{current})}\)</span></li>
+<li class="fragment">the normalizing constant <span
+class="math inline">\(P(\text{Data})\)</span> cancels — we only need the
+<strong>likelihood</strong> and the <strong>prior</strong></li>
+</ul>
+</section>
+<section id="discrete-regression-step-0" class="slide level1">
+<h1>Discrete regression — step 0</h1>
+<p><img data-src="out/02_regression_discrete_step00.png" /></p>
+</section>
+<section id="discrete-regression-step-1" class="slide level1">
+<h1>Discrete regression — step 1</h1>
+<p><img data-src="out/02_regression_discrete_step01.png" /></p>
+</section>
+<section id="discrete-regression-step-2" class="slide level1">
+<h1>Discrete regression — step 2</h1>
+<p><img data-src="out/02_regression_discrete_step02.png" /></p>
+</section>
+<section id="live-chain-discrete-regression" class="slide level1">
+<h1>Live chain — discrete regression</h1>
+<video src="out/02_regression_discrete.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="convergence-discrete-regression" class="slide level1">
+<h1>Convergence — discrete regression</h1>
+<p><img data-src="out/02_regression_discrete_convergence.png" /> -
+Acceptance rate: 50.73%</p>
+</section>
+<section id="from-discrete-steps-to-random-jumps" class="slide level1">
+<h1>From discrete steps to random jumps</h1>
+<ul>
+<li class="fragment">To sample from a continuous space, we need to make
+proposals using a random distribution, rather than one step
+left/right</li>
+<li class="fragment">Use <span class="math inline">\(\beta_{proposed}
+\sim \text{Normal}(\beta_{current}, 0.1)\)</span>: Note that this is
+<strong>symmetric</strong> (needed to make Metropolis work)</li>
+<li class="fragment">Note that 0.1 is a hyperparameter that needs to be
+tuned</li>
+</ul>
+</section>
+<section id="continuous-1-param-step-0" class="slide level1">
+<h1>Continuous 1-param — step 0</h1>
+<p><img data-src="out/03_regression_continuous_step00.png" /></p>
+</section>
+<section id="continuous-1-param-step-1" class="slide level1">
+<h1>Continuous 1-param — step 1</h1>
+<p><img data-src="out/03_regression_continuous_step01.png" /></p>
+</section>
+<section id="live-chain-continuous-1-param" class="slide level1">
+<h1>Live chain — continuous 1-param</h1>
+<video src="out/03_regression_continuous.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="convergence-continuous-1-param" class="slide level1">
+<h1>Convergence — continuous 1-param</h1>
+<p><img data-src="out/03_regression_continuous_convergence.png" /> -
+Acceptance rate: 43.66%</p>
+</section>
+<section id="now-lets-do-2-parameters" class="slide level1">
+<h1>Now let’s do 2 parameters</h1>
+<ul>
+<li class="fragment"><span class="math inline">\(y \sim
+\text{Normal}(\mu, \sigma)\)</span>, <span class="math inline">\(\quad
+\mu = \alpha + \beta x\)</span></li>
+<li class="fragment">Assume we now only know <span
+class="math inline">\(\sigma = 0.25\)</span>, and we are sampling <span
+class="math inline">\((\alpha, \beta)\)</span> jointly</li>
+<li class="fragment">Procedure is identical: propose, compare ratios,
+accept or stay</li>
+<li class="fragment">Proposal: independent Gaussians
+<ul>
+<li class="fragment"><span class="math inline">\(\alpha_{proposed} \sim
+\text{Normal}(\alpha_{current}, 0.05)\)</span></li>
+<li class="fragment"><span class="math inline">\(\beta_{proposed} \sim
+\text{Normal}(\beta_{current}, 0.10)\)</span></li>
+</ul></li>
+<li class="fragment">Still symmetric → same acceptance formula</li>
+<li class="fragment">But now <strong>two step sizes</strong> to tune —
+same headache, multiplied</li>
+</ul>
+</section>
+<section id="two-param-regression-step-0" class="slide level1">
+<h1>Two-param regression — step 0</h1>
+<p><img data-src="out/04_regression_2param_step00.png" /></p>
+</section>
+<section id="two-param-regression-step-1" class="slide level1">
+<h1>Two-param regression — step 1</h1>
+<p><img data-src="out/04_regression_2param_step01.png" /></p>
+</section>
+<section id="live-chain-two-param-regression" class="slide level1">
+<h1>Live chain — two-param regression</h1>
+<video src="out/04_regression_2param.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="d-convergence-two-param-regression" class="slide level1">
+<h1>2D convergence — two-param regression</h1>
+<p><img data-src="out/04_regression_2param_convergence.png" /> -
+Acceptance rate: 25.13%</p>
+</section>
+<section id="d-marginals-two-param-regression" class="slide level1">
+<h1>1D marginals — two-param regression</h1>
+<p><img data-src="out/04_regression_2param_convergence_1d.png" /></p>
+</section>
+<section id="param-takeaway" class="slide level1">
+<h1>2-param takeaway</h1>
+<ul>
+<li class="fragment">Chain still converges to the right posterior</li>
+<li class="fragment">But tuning gets painful: two step sizes, both
+interacting with posterior geometry</li>
+<li class="fragment">Hand-tuning will become hopeless if we scale to a
+model with hundreds of parameters</li>
+<li class="fragment">Acceptance rate drops fast with dimensions: 43%
+(1-param regression) → 25% (2-param regression). Imagine 500.</li>
+<li class="fragment"><strong>This is the gap HMC fills</strong></li>
+</ul>
+</section>
+<section id="today-3" class="slide level1">
+<h1>Today</h1>
+<div>
+<ol type="1">
+<li>King Markov analogy for MCMC</li>
+<li>The Metropolis algorithm</li>
+<li><strong>Hamiltonian Monte Carlo &amp; No-U-Turn
+Sampler</strong></li>
+</ol>
+</div>
+</section>
+<section id="choosing-step-size-is-a-mess" class="slide level1">
+<h1>Choosing step size is a mess</h1>
+<figure>
+<img data-src="external/fig_9_3.jpg" style="max-height: 460px"
+alt="Figure 9.3" />
+<figcaption aria-hidden="true">Figure 9.3</figcaption>
+</figure>
+<p>Fundamental tradeoff, especially as dimensions get high</p>
+</section>
+<section id="guess-and-check-strategies-get-stuck" class="slide level1">
+<h1>Guess and check strategies get stuck</h1>
+<ul>
+<li class="fragment">Case 1: <strong>Narrow / highly-curved
+posteriors</strong></li>
+</ul>
+<div class="fragment">
+<video src="external/metropolis_donut.mp4" controls style="max-height: 480px">
+</video>
+<p><small>demo from
+<a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small></p>
+</div>
+</section>
+<section id="guess-and-check-strategies-get-stuck-1"
+class="slide level1">
+<h1>Guess and check strategies get stuck</h1>
+<ul>
+<li class="fragment">Case 2: <strong>Multi-modal
+posteriors</strong></li>
+</ul>
+<div class="fragment">
+<video src="external/metropolis_multimodal.mp4" controls style="max-height: 480px">
+</video>
+<p><small>demo from
+<a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small></p>
+</div>
+</section>
+<section id="concentration-of-measure" class="slide level1">
+<h1>Concentration of measure</h1>
+<ul>
+<li class="fragment">In high-D, typical values are <strong>far from the
+mode</strong></li>
+<li class="fragment">For a <span class="math inline">\(d\)</span>-dim
+Normal, mass sits on a thin shell at radius <span
+class="math inline">\(\sim \sqrt{d}\)</span> from the mode</li>
+</ul>
+<div class="fragment">
+<figure>
+<img data-src="external/fig_9_4.jpg" style="max-height: 360px"
+alt="Figure 9.4" />
+<figcaption aria-hidden="true">Figure 9.4</figcaption>
+</figure>
+</div>
+<ul>
+<li class="fragment">Random-walk proposer centered on the current point
+keeps suggesting moves into the low-density interior</li>
+<li class="fragment">Most proposals miss the typical set and get
+rejected</li>
+</ul>
+</section>
+<section id="what-we-need" class="slide level1">
+<h1>What we need</h1>
+<ul>
+<li class="fragment">We need something that is smarter than blind local
+random walks</li>
+<li class="fragment">Smarter proposals: proposals stay in high-density
+regions instead of wandering blindly</li>
+</ul>
+</section>
+<section id="enter-king-monty" class="slide level1">
+<h1>Enter King Monty</h1>
+<ul>
+<li class="fragment">Monty’s kingdom is a narrow N–S valley</li>
+<li class="fragment">The valleys are densely populated; the ridges are
+empty</li>
+<li class="fragment">King Monty also wants to visit constituents in
+proportion to where they live</li>
+<li class="fragment">Location = parameter values; population density =
+posterior probability</li>
+</ul>
+</section>
+<section id="intuition" class="slide level1">
+<h1>Intuition</h1>
+<ul>
+<li class="fragment">Imagine flicking a metal ball sitting in a bowl
+(giving it some <strong>momentum</strong>)</li>
+<li class="fragment">No friction — but we can magically stop it after
+some <strong>pre-specified</strong> duration</li>
+<li class="fragment">Wherever it stops is the sample</li>
+</ul>
+<p><img data-src="external/ChatGPT_bowl.png"
+style="max-height: 350px" /> <small>image generated by
+ChatGPT</small></p>
+</section>
+<section id="king-montys-algorithm" class="slide level1">
+<h1>King Monty’s algorithm</h1>
+<ol type="1">
+<li class="fragment">Pick a <strong>random direction</strong> (N or S)
+and a <strong>random momentum</strong></li>
+<li class="fragment">Drive. The car obeys physics:
+<ul>
+<li class="fragment">Speeds up going downhill (toward high
+population)</li>
+<li class="fragment">Slows going uphill (toward low population)</li>
+</ul></li>
+<li class="fragment">Drive for a <strong>pre-specified
+duration</strong>, then stop</li>
+<li class="fragment">Wherever you are is the sample</li>
+<li class="fragment">Repeat</li>
+</ol>
+</section>
+<section id="king-monty-is-hmc" class="slide level1">
+<h1>King Monty IS HMC</h1>
+<table>
+<thead>
+<tr class="header">
+<th>Analogy</th>
+<th>HMC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Valley landscape</td>
+<td>Posterior distribution</td>
+</tr>
+<tr class="even">
+<td>Car’s position</td>
+<td>Parameter values</td>
+</tr>
+<tr class="odd">
+<td>Population density</td>
+<td>Posterior probability</td>
+</tr>
+<tr class="even">
+<td>Random kick</td>
+<td>Random momentum draw</td>
+</tr>
+<tr class="odd">
+<td>Car’s physics</td>
+<td>Hamiltonian dynamics</td>
+</tr>
+<tr class="even">
+<td>Pre-specified drive time</td>
+<td>leapfrog steps × step size</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="momentum-and-energy" class="slide level1">
+<h1>Momentum and energy</h1>
+<ul>
+<li class="fragment">Kinetic energy (from the random momentum) +
+potential energy (<span class="math inline">\(-\log\)</span> posterior);
+together: the <strong>Hamiltonian</strong></li>
+<li class="fragment">The total energy (Hamiltonian) is (approximately)
+conserved along the trajectory</li>
+<li class="fragment">Energy from the kick bounds how high the car can
+climb
+<ul>
+<li class="fragment">Small kick → stays near valley bottom → samples
+near the mode</li>
+<li class="fragment">Big kick → climbs the walls → samples in the
+tails</li>
+<li class="fragment">The random momentum draw is what gives HMC tail
+coverage</li>
+</ul></li>
+</ul>
+</section>
+<section id="pre-specified-duration" class="slide level1">
+<h1>Pre-specified duration</h1>
+<ul>
+<li class="fragment">Number of <strong>leapfrog steps</strong> (<span
+class="math inline">\(L\)</span>) and <strong>step size</strong> (<span
+class="math inline">\(\varepsilon\)</span>)</li>
+<li class="fragment">Each leapfrog step:
+<ol type="1">
+<li class="fragment">Check the <strong>gradient</strong> at the current
+position — which way is downhill, how steep</li>
+<li class="fragment">Use it to update the car’s
+<strong>speed</strong></li>
+<li class="fragment">Use the new speed to update the car’s
+<strong>position</strong></li>
+</ol></li>
+<li class="fragment">Repeat <span class="math inline">\(L\)</span> times
+with step size <span class="math inline">\(\varepsilon\)</span>.
+Wherever the car ends up is the proposal.</li>
+</ul>
+</section>
+<section id="accepting-the-proposal" class="slide level1">
+<h1>Accepting the proposal</h1>
+<ul>
+<li class="fragment">Now the acceptance is based on whether the total
+energy is conserved</li>
+<li class="fragment">Real physics: energy is conserved exactly → you’d
+accept every proposal</li>
+<li class="fragment">Leapfrog is a discrete approximation → energy
+drifts slightly</li>
+<li class="fragment">The MH step accepts with a probability based on how
+much “energy” leaked</li>
+</ul>
+</section>
+<section id="one-full-trajectory-hmc" class="slide level1">
+<h1>One full trajectory — HMC</h1>
+<video src="out/05_hmc_walkthrough.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="multiple-proposals-in-a-row-hmc" class="slide level1">
+<h1>Multiple proposals in a row — HMC</h1>
+<video src="out/05_hmc_chain.mp4" controls style="max-height: 560px">
+</video>
+</section>
+<section id="convergence-hmc" class="slide level1">
+<h1>Convergence — HMC</h1>
+<p><img data-src="out/05_hmc_walkthrough_convergence.png" /> -
+Acceptance rate: 99.98%</p>
+</section>
+<section id="hmc-narrow-highly-curved-posteriors" class="slide level1">
+<h1>HMC — narrow / highly-curved posteriors</h1>
+<video src="external/hamiltonian_donut.mp4" controls style="max-height: 480px">
+</video>
+<p><small>demo from
+<a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small></p>
+</section>
+<section id="hmc-multi-modal-posteriors" class="slide level1">
+<h1>HMC — multi-modal posteriors</h1>
+<video src="external/hamiltonian_multimodal.mp4" controls style="max-height: 480px">
+</video>
+<p><small>demo from
+<a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small></p>
+</section>
+<section id="why-hmc-works-better" class="slide level1">
+<h1>Why HMC works better</h1>
+<ul>
+<li class="fragment">Trajectories move the proposal <strong>far</strong>
+in one iteration</li>
+<li class="fragment">…while staying in high-density regions (follows the
+gradient)</li>
+<li class="fragment">Doesn’t get stuck (at least for this reason)!</li>
+<li class="fragment">Extra variables (momentum, energy) provide
+diagnostics (e.g., when energy isn’t conserved)</li>
+</ul>
+</section>
+<section id="costs" class="slide level1">
+<h1>Costs</h1>
+<ul>
+<li class="fragment">Several gradient evaluations per iteration (more
+expensive)</li>
+<li class="fragment">Almost always worth it — much better samples per
+iteration</li>
+</ul>
+</section>
+<section id="tuning-hmc-two-knobs" class="slide level1">
+<h1>Tuning HMC — two knobs</h1>
+<ul>
+<li class="fragment">Number of <strong>leapfrog steps</strong> (<span
+class="math inline">\(L\)</span>) and <strong>step size</strong> (<span
+class="math inline">\(\varepsilon\)</span>)</li>
+<li class="fragment">Can cause the U-turn problem and gets stuck again
+if chosen poorly</li>
+</ul>
+<div class="fragment">
+<video src="external/hamiltonian_standard_uturn.mp4" controls style="max-height: 480px">
+</video>
+<p><small>demo from
+<a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small></p>
+</div>
+<ul>
+<li class="fragment">Still two knobs! Can we do better?</li>
+</ul>
+</section>
+<section id="nuts-no-u-turn-sampler" class="slide level1">
+<h1>NUTS — No-U-Turn Sampler</h1>
+<ul>
+<li class="fragment">Picks number of leapfrog steps
+<strong>adaptively</strong> — keep driving until the trajectory folds
+back on itself, then stop
+<ul>
+<li class="fragment">No more guessing “how long is long enough”</li>
+</ul></li>
+<li class="fragment">Picks step size <strong>adaptively during
+warmup</strong>
+<ul>
+<li class="fragment">Before the actual sampling, draw some samples to
+pick step size</li>
+<li class="fragment">Samples during warmup are NOT from the posterior,
+and are automatically discarded</li>
+</ul></li>
+<li class="fragment">Only one knob now, essentially: <strong>target
+acceptance rate</strong>
+<ul>
+<li class="fragment">The warmup gets chosen based on this</li>
+<li class="fragment">Usually some default exists</li>
+<li class="fragment">Higher target acceptance rate → smaller step size →
+fewer divergences, but more leapfrog steps per sample (slower)</li>
+</ul></li>
+<li class="fragment">You will be using this for the rest of the
+quarter</li>
+</ul>
+</section>
+<section id="thanks" class="slide level1">
+<h1>Thanks!</h1>
+<p>Questions?</p>
+</section>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/reveal.js@4/dist/reveal.js"></script>
+
+  <!-- reveal.js plugins -->
+  <script src="https://unpkg.com/reveal.js@4/plugin/notes/notes.js"></script>
+  <script src="https://unpkg.com/reveal.js@4/plugin/search/search.js"></script>
+  <script src="https://unpkg.com/reveal.js@4/plugin/zoom/zoom.js"></script>
+  <script src="https://unpkg.com/reveal.js@4/plugin/math/math.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://revealjs.com/config/
+      Reveal.initialize({
+        // Display controls in the bottom right corner
+        controls: true,
+
+        // Help the user learn the controls by providing hints, for example by
+        // bouncing the down arrow when they first encounter a vertical slide
+        controlsTutorial: true,
+
+        // Determines where controls appear, "edges" or "bottom-right"
+        controlsLayout: 'bottom-right',
+
+        // Visibility rule for backwards navigation arrows; "faded", "hidden"
+        // or "visible"
+        controlsBackArrows: 'faded',
+
+        // Display a presentation progress bar
+        progress: true,
+
+        // Display the page number of the current slide
+        slideNumber: false,
+
+        // 'all', 'print', or 'speaker'
+        showSlideNumber: 'all',
+
+        // Add the current slide number to the URL hash so that reloading the
+        // page/copying the URL will return you to the same slide
+        hash: true,
+
+        // Start with 1 for the hash rather than 0
+        hashOneBasedIndex: false,
+
+        // Flags if we should monitor the hash and change slides accordingly
+        respondToHashChanges: true,
+
+        // Push each slide change to the browser history
+        history: false,
+
+        // Enable keyboard shortcuts for navigation
+        keyboard: true,
+
+        // Enable the slide overview mode
+        overview: true,
+
+        // Disables the default reveal.js slide layout (scaling and centering)
+        // so that you can use custom CSS layout
+        disableLayout: false,
+
+        // Vertical centering of slides
+        center: false,
+
+        // Enables touch navigation on devices with touch input
+        touch: true,
+
+        // Loop the presentation
+        loop: false,
+
+        // Change the presentation direction to be RTL
+        rtl: false,
+
+        // see https://revealjs.com/vertical-slides/#navigation-mode
+        navigationMode: 'default',
+
+        // Randomizes the order of slides each time the presentation loads
+        shuffle: false,
+
+        // Turns fragments on and off globally
+        fragments: true,
+
+        // Flags whether to include the current fragment in the URL,
+        // so that reloading brings you to the same fragment position
+        fragmentInURL: true,
+
+        // Flags if the presentation is running in an embedded mode,
+        // i.e. contained within a limited portion of the screen
+        embedded: false,
+
+        // Flags if we should show a help overlay when the questionmark
+        // key is pressed
+        help: true,
+
+        // Flags if it should be possible to pause the presentation (blackout)
+        pause: true,
+
+        // Flags if speaker notes should be visible to all viewers
+        showNotes: false,
+
+        // Global override for autoplaying embedded media (null/true/false)
+        autoPlayMedia: null,
+
+        // Global override for preloading lazy-loaded iframes (null/true/false)
+        preloadIframes: null,
+
+        // Number of milliseconds between automatically proceeding to the
+        // next slide, disabled when set to 0, this value can be overwritten
+        // by using a data-autoslide attribute on your slides
+        autoSlide: 0,
+
+        // Stop auto-sliding after user input
+        autoSlideStoppable: true,
+
+        // Use this method for navigation when auto-sliding
+        autoSlideMethod: null,
+
+        // Specify the average time in seconds that you think you will spend
+        // presenting each slide. This is used to show a pacing timer in the
+        // speaker view
+        defaultTiming: null,
+
+        // Enable slide navigation via mouse wheel
+        mouseWheel: false,
+
+        // The display mode that will be used to show slides
+        display: 'block',
+
+        // Hide cursor if inactive
+        hideInactiveCursor: true,
+
+        // Time before the cursor is hidden (in ms)
+        hideCursorTime: 5000,
+
+        // Opens links in an iframe preview overlay
+        previewLinks: false,
+
+        // Transition style (none/fade/slide/convex/concave/zoom)
+        transition: 'none',
+
+        // Transition speed (default/fast/slow)
+        transitionSpeed: 'default',
+
+        // Transition style for full page slide backgrounds
+        // (none/fade/slide/convex/concave/zoom)
+        backgroundTransition: 'fade',
+
+        // Number of slides away from the current that are visible
+        viewDistance: 3,
+
+        // Number of slides away from the current that are visible on mobile
+        // devices. It is advisable to set this to a lower number than
+        // viewDistance in order to save resources.
+        mobileViewDistance: 2,
+
+        // The "normal" size of the presentation, aspect ratio will be preserved
+        // when the presentation is scaled to fit different resolutions. Can be
+        // specified using percentage units.
+        width: 1280,
+
+        height: 800,
+
+        // Factor of the display size that should remain empty around the content
+        margin: 0.04,
+
+        math: {
+          mathjax: 'https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js',
+          config: 'TeX-AMS_HTML-full',
+          tex2jax: {
+            inlineMath: [['\\(','\\)']],
+            displayMath: [['\\[','\\]']],
+            balanceBraces: true,
+            processEscapes: false,
+            processRefs: true,
+            processEnvironments: true,
+            preview: 'TeX',
+            skipTags: ['script','noscript','style','textarea','pre','code'],
+            ignoreClass: 'tex2jax_ignore',
+            processClass: 'tex2jax_process'
+          },
+        },
+
+        // reveal.js plugins
+        plugins: [
+          RevealMath,
+          RevealNotes,
+          RevealSearch,
+          RevealZoom
+        ]
+      });
+    </script>
+    </body>
+</html>
