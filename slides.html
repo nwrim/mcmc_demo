@@ -54,7 +54,7 @@ Sampler</li>
 don’t get something early it’s likely the rest won’t make sense
 either</li>
 <li class="fragment">This thing is available at <a
-href="https://nwrim.github.io/mcmc_demo/slides.html">[nwrim.github.io/mcmc_demo](https://nwrim.github.io/mcmc_demo/slides.html)</a>
+href="https://nwrim.github.io/mcmc_demo/slides.html">https://nwrim.github.io/mcmc_demo/slides.html</a>
 and all materials are in <a
 href="https://github.com/nwrim/mcmc_demo">https://github.com/nwrim/mcmc_demo</a></li>
 </ul>
@@ -153,7 +153,7 @@ class="math inline">\(\frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{cu
 move</li>
 <li class="fragment">If proposal is <strong>smaller</strong> → move
 proportional to relative sizes</li>
-<li class="fragment">If rejected, <strong>Stay on current
+<li class="fragment">If rejected, <strong>stay on current
 island</strong> for one more week</li>
 <li class="fragment">In practice, this is moving with probability <span
 class="math inline">\(\min(1,
@@ -190,8 +190,7 @@ class="math inline">\(\min(1,
 proportions</li>
 <li class="fragment">We only gave him a rule for comparing two adjacent
 islands</li>
-<li class="fragment"><strong>The proportions emerged.</strong> That’s
-the whole trick of MCMC.</li>
+<li class="fragment"><strong>The proportions emerged.</strong></li>
 <li class="fragment">This is an example of the <strong>Metropolis
 algorithm</strong>: guarantees that it converges to the correct
 proportion in the long run, as long as proposals are symmetric</li>
@@ -266,7 +265,7 @@ class="math inline">\(\{0.40, 0.45, \ldots, 0.85\}\)</span></li>
 style="max-height: 360px; display: block; margin: auto" /></p>
 </div>
 <ul>
-<li class="fragment">so we want to sample from the posterior: <span
+<li class="fragment">So we want to sample from the posterior: <span
 class="math inline">\(P(\beta = i | \text{Data})\)</span> for <span
 class="math inline">\(i \in \{0.40, 0.45, \ldots, 0.85\}\)</span></li>
 <li class="fragment">Yes, discrete <span

@@ -15,7 +15,7 @@ theme: white
 # Before we begin
 - Stop and ask questions at any point
 - Most of the material is incremental, so if you don't get something early it's likely the rest won't make sense either
-- This thing is available at [[nwrim.github.io/mcmc_demo](https://nwrim.github.io/mcmc_demo/slides.html)](https://nwrim.github.io/mcmc_demo/slides.html) and all materials are in [https://github.com/nwrim/mcmc_demo](https://github.com/nwrim/mcmc_demo)
+- This thing is available at [https://nwrim.github.io/mcmc_demo/slides.html](https://nwrim.github.io/mcmc_demo/slides.html) and all materials are in [https://github.com/nwrim/mcmc_demo](https://github.com/nwrim/mcmc_demo)
 
 # Methods we have discussed so far for posterior computation
 - Analytical approach (often impossible)
@@ -68,7 +68,7 @@ theme: white
 - Compare relative sizes: $\frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{current}}}$
   - If proposal is **bigger** → always move
   - If proposal is **smaller** → move proportional to relative sizes
-  - If rejected, **Stay on current island** for one more week
+  - If rejected, **stay on current island** for one more week
   - In practice, this is moving with probability $\min(1, \frac{\text{size}_{\text{proposal}}}{\text{size}_{\text{current}}})$
 
 # Island chain — week 0
@@ -117,7 +117,7 @@ theme: white
 Let's see this work in a simple regression setup
 
 # Simulated data
-- True model: $y \sim \text{Normal}(\alpha + \beta x,\ \sigma)$
+- True model: $y \sim \text{Normal}(\mu, \sigma)$, $\quad \mu = \alpha + \beta x$
 - True values: $\alpha = 0$, $\beta = 0.6$, $\sigma = 0.25$
 
 :::fragment
@@ -133,7 +133,7 @@ Let's see this work in a simple regression setup
 ![](out/02_regression_discrete_lines.png){style="max-height: 360px; display: block; margin: auto"}
 :::
 
-- so we want to sample from the posterior: $P(\beta = i | \text{Data})$ for $i \in \{0.40, 0.45, \ldots, 0.85\}$
+- So we want to sample from the posterior: $P(\beta = i | \text{Data})$ for $i \in \{0.40, 0.45, \ldots, 0.85\}$
 - Yes, discrete $\beta$s are ridiculous, but we are mapping directly to the islands. We'll relax this shortly
 
 # Acceptance probability
@@ -349,6 +349,16 @@ Fundamental tradeoff, especially as dimensions get high
 
 ![](out/05_hmc_walkthrough_convergence.png)
 - Acceptance rate: 99.98%
+
+# HMC — narrow / highly-curved posteriors
+
+<video src="external/hamiltonian_donut.mp4" controls style="max-height: 480px"></video>
+<small>demo from <a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small>
+
+# HMC — multi-modal posteriors
+
+<video src="external/hamiltonian_multimodal.mp4" controls style="max-height: 480px"></video>
+<small>demo from <a href="https://chi-feng.github.io/mcmc-demo">chi-feng.github.io/mcmc-demo</a></small>
 
 # Why HMC works better
 
